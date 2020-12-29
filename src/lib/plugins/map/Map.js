@@ -3,7 +3,7 @@ const path = require('path')
 const Vec3 = require('vec3').Vec3
 const nbt = require('prismarine-nbt')
 
-const MapIcon = require('./MapIcon')
+let MapIcon
 
 class Map {
   constructor (id) {
@@ -25,8 +25,8 @@ class Map {
 
     // icon positioning is 256x256 with 0, 0 as center
     this.icons = {
-      random1: new MapIcon(5, width - 1, height - 1, 135), // bottom right
-      random2: new MapIcon(5, -(width), -(height), 315) // top left
+      random1: new MapIcon('target_point', width - 1, height - 1, 135), // bottom right
+      random2: new MapIcon('target_point', -(width), -(height), 315) // top left
     }
 
     this.setColorBuffer(Buffer.alloc(width * height))
@@ -69,9 +69,12 @@ class Map {
       nbt.parse(raw, (error, data) => {
         if (error) reject(error)
 
-        const mapData = nbt.simplify(data).data
+        const mapObject = nbt.simplify(data)
+        const mapData = mapObject.data
 
-        console.log(mapData)
+        if (mapObject.DataVersion) {
+          this.mapVersion = mapObject.DataVersion
+        }
 
         resolve(mapData)
       })
@@ -82,7 +85,7 @@ class Map {
     mapData.colors = Buffer.from(colors)
 
     if (mapData.trackingPosition) {
-      this.icons.player = new MapIcon(0, 0, 0, 0)
+      this.icons.player = new MapIcon('player', 0, 0, 0)
     }
 
     this.data = mapData
@@ -170,9 +173,19 @@ class Map {
   }
 
   /**
+   * Get the current map version
+   */
+  get mapVersion () {
+    // 1343 (1.12.2) is currently the assumed version if none is supplied. This might change in the future.
+    return this.currentMapVersion || 1343
+  }
+
+  set mapVersion (version) {
+    this.currentMapVersion = version
+  }
+
+  /**
    * Convert world coordinates to map position
-   * @param position
-   * @returns {*|moment.Duration|void}
    */
   coordsToMapPosition (position) {
     const mapCenter = this.mapCenter
@@ -182,4 +195,13 @@ class Map {
   }
 }
 
-module.exports = Map
+module.exports = (version) => {
+  if (!version) {
+    throw new Error('plugins:map - No server version has been supplied')
+  }
+
+  Map.serverVersion = version
+  MapIcon = require('./MapIcon')(version)
+
+  return Map
+}

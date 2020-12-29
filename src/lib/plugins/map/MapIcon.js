@@ -1,8 +1,8 @@
 class MapIcon {
-  constructor (type, x, y, direction = 0) {
+  constructor (type = 'player', x, y, direction = 0) {
     this.data = {
       direction,
-      type,
+      type: MapIcon.iconsByName[type].id,
       x,
       y
     }
@@ -29,7 +29,17 @@ class MapIcon {
     this.data.x = Math.round(position.x)
     this.data.y = Math.round(position.z)
 
+    if (this.outOfBounds) {
+      this.updateIcon('player_off_map')
+    } else {
+      this.updateIcon('player')
+    }
+
     return this.output
+  }
+
+  updateIcon (type) {
+    this.data.type = MapIcon.iconsByName[type].id
   }
 
   degToSteps (degrees) {
@@ -67,6 +77,15 @@ class MapIcon {
       direction: this.degToSteps(direction)
     }
   }
+
+  get outOfBounds () {
+    return this.data.x === 127 || this.data.x === -128 || this.data.y === 127 || this.data.y === -128
+  }
 }
 
-module.exports = MapIcon
+module.exports = (version) => {
+  MapIcon.serverVersion = version
+  MapIcon.iconsByName = require('minecraft-data')(version).mapIconsByName
+
+  return MapIcon
+}

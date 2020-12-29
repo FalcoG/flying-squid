@@ -1,6 +1,6 @@
-const Map = require('./Map')
-
 module.exports.player = async function (player, server, settings) {
+  const Map = require('./Map')(settings.version)
+
   let lastPlayerPosition
 
   player.on('move', ({ position }) => {
@@ -54,7 +54,7 @@ module.exports.player = async function (player, server, settings) {
       return
     }
 
-    const loadedMap = new Map(heldItem.metadata)
+    const loadedMap = new Map(heldItem.metadata, settings.version)
     await loadedMap.load()
 
     player._client.write('map', loadedMap.itemPacket)
